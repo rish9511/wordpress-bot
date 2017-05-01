@@ -3,6 +3,7 @@ from edit_article import start_editing
 from mediahandler import download_and_upload_images
 from new_post import create_new_post
 from post_it import post_article
+from remove_everything import remove_files
 import requests
 
 
@@ -38,17 +39,21 @@ def start_processing(form_data, session):
 
 						if download_and_upload_images(session, form_data["website"]):  # the function always returns true, hence we don't have an else block
 							if post_article(session, form_data["website"]):
-								print "Success"
+
+								print "\nSuccess"
 							else:
-								print "Failed"
+								print "\nFailed"
 
 					else:
-						print "Could not create the post"
+						print "\nCould not create the post"
 
 				else:
-					print "Could not edit the artilce"
+					print "\nCould not edit the artilce"
 			else:
-				print "Could not Download the article"
+				print "\nCould not Download the article"
+
+		# remove all the files irrespective of whether the article got posted or not
+		remove_files()
 
 
 def init(form_data):

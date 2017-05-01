@@ -20,6 +20,8 @@ def process_details():
 		form_data = json.dumps(request.json)
 		if form_data:
 				channel.basic_publish(exchange='', routing_key='wordpress_details', body=form_data)
+				# if you ever want to know the relevance of the next line,refer to : https://github.com/pika/pika/issues/397#issuecomment-35322199
+				pika.BlockingConnection.process_data_events(connection)  
 
 	return ""
 
