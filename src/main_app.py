@@ -20,7 +20,6 @@ def process_details():
 		form_data = json.dumps(request.json)
 		if form_data:
 				channel.basic_publish(exchange='', routing_key='wordpress_details', body=form_data)
-				connection.close()
 
 	return ""
 
@@ -32,3 +31,5 @@ def index():
 
 if __name__ == "__main__":
 	app.run()
+	print "closing connection"
+	connection.close()

@@ -1,6 +1,7 @@
 import httplib2
 import os
 import io
+import re
 
 from apiclient import discovery
 from apiclient.http import MediaIoBaseDownload
@@ -36,23 +37,44 @@ def get_credentials():
     return credentials
 
 
-def artilce_download():
+def get_article_id(article_link):
+    pattern = "https://docs.google.com/document/d/(.*)/"
 
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    service = discovery.build('drive', 'v2', http=http)
+    if re.search(pattern, article_link):
+        return re.search(pattern, article_link).group(1)
 
-    # download the article
-    file_id = '1cg8FP3y1MlWtdOSN0hynEkv59FDMndnoBvXCJEywEhw'
-    request = service.files().export_media(fileId=file_id, mimeType='text/plain')
+    return None
+
+
+def download(article_id, google_service):
+
+    request = google_service.files().export_media(fileId=article_id, mimeType='text/plain')
     fh = io.BytesIO()
     downloader = MediaIoBaseDownload(fh, request)
     done = False
     while done is False:
         status, done = downloader.next_chunk()
-
-        print("Download %d%%." % int(status.progress() * 100))
         if done:
             with open("../article.txt", "w") as file:
                 file.write(fh.getvalue())
     return done
+
+
+def article_download(article_link):
+    '''
+        * step 1 - get the credentials and authenticate
+        * step 2 - get the article id from the article_link
+        * step 3 - download
+    '''
+
+    credentials = get_credentials()
+    http = credentials.authorize(httplib2.Http())
+    google_service = discovery.build('drive', 'v2', http=http)
+
+    article_id = get_article_id(article_link)
+
+    if article_id:
+        if download(article_id, google_service):
+            return True
+
+    return False

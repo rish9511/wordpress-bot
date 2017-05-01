@@ -3,33 +3,28 @@ import re
 
 
 def replace_original_with_temp(temp_file, original_file):
-	oserror = ""
+
 	move = 'mv %s %s' % (temp_file, original_file)
 	try:
 		os.system(move)
 	except OSError as e:
-		oserror = e
+		return False
 
-	return oserror
+	return True
 
 
 def write_to_temp_file(text):
+
 	try:
 		with open("../article.txt.tmp", "a") as temp_article:
-			print text
 			temp_article.write(text)
 	except IOError as error:
 		return False
 
+	return True
 
-def edit_article():
-	try:
-		with open("../details.txt", "r") as details:
-			for line in details:
-				if "tag" in line:
-					tag = line.strip().replace(" ", "")
-	except OSError as e:
-		print "Could not get the tag"
+
+def edit_article(tag):
 
 	try:
 		with open("../article.txt", "r") as article:
@@ -87,10 +82,10 @@ def edit_article():
 	return True
 
 
-def start_editing():
+def start_editing(tag):
 
-	edit_done = edit_article()
-	if edit_done:
-		oserror = replace_original_with_temp("../article.txt.tmp", "../article.txt")
+	if edit_article(tag):
+		if replace_original_with_temp("../article.txt.tmp", "../article.txt"):
+			return True
 
-	return edit_done
+	return False
