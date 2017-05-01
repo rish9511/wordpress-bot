@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Wrodpress Automation</title>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/css/materialize.min.css">
+        <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.1.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.7/js/materialize.min.js"></script>
+		<style>
+
+			#articles {
+				overflow-y: scroll;
+				height: 330px;
+				width: 625px;
+			}
+
+		</style>
+    </head>
+    <body>
+    	<main>
+    	<div id="data">
+	    	<div class="row">
+	            <div class="col l10">
+	            	<div class="row">
+					    <div class="col l10 offset-l2 s10 offset-s1 center flow-text"><br>
+					        Wordpress details
+					        <div class="divider"></div>
+					    </div>
+					</div>
+			    	<div class="card-panel col offset-l2 l4 s10 offset-s1 center">
+				        <div class="row">
+				            <center>
+					            <form id="website_details" name="website_details">
+					            	
+					                <div class="input-field col l12 s2  ">
+							          	<input id="website" name="website" type="text">
+							          	<label for="website">Website</label>     	
+							        </div>
+							        <div class="input-field col l12 s6 ">
+							        	<input id="user_name" name="user_name" type="text">
+							          	<label for="user_name">User Name</label>
+							        </div>
+							        <div class="input-field col l12 s10 ">
+							        	<input id="password" name="password" type="text">
+							          	<label for="password">Password</label>
+							        </div>
+							        <div class="input-field col l12 s14 ">
+							        	<input id="tag" name="tag" type="text">
+							          	<label for="tag">Tag</label>
+							        </div>
+					            </form>
+      
+				        	</center>
+			            	
+				        </div>
+			    	</div>
+			    	<div class="card-panel col offset-l1 l5 s2 offset-s1 center">
+			    		<div class="row">
+			    			<center>
+			    				<form id= "articles" name="article_links">
+							        <div class="input-field col l12 s2 ">
+							        	Article Links
+							        	
+							        	<input id="article_link_1" name="article_link_1" type="text">
+							        	<input id="article_link_2" name="article_link_2" type="text">
+							        	<input id="article_link_3" name="article_link_3" type="text">
+							        	<input id="article_link_4" name="article_link_4" type="text">
+							        	<input id="article_link_5" name="article_link_5" type="text">
+							        	<input id="article_link_6" name="article_link_6" type="text">
+							        	<input id="article_link_7" name="article_link_7" type="text">
+							        	<input id="article_link_8" name="article_link_8" type="text">
+							        	<input id="article_link_9" name="article_link_9" type="text">
+							        	<input id="article_link_10" name="article_link_10" type="text">
+							        	<input id="article_link_11" name="article_link_11" type="text">
+							        	<input id="article_link_12" name="article_link_12" type="text">
+							        	<input id="article_link_13" name="article_link_13" type="text">
+							        	<input id="article_link_14" name="article_link_14" type="text">
+							        	<input id="article_link_15" name="article_link_15" type="text">
+
+							          	
+							        </div> 
+					            </form>
+			    			</center>
+			    		</div>
+			    	</div>
+
+			    </div>
+
+			    <div class="col s11 offset0 center"><br>
+			    <br><br><br>
+	        		<button id= "process_input" class="waves-effect waves-light  btn yellow accent-4" >
+	        		<span style="color:black">Send<i class="material-icons right">send</i></span>
+	        		</button>
+				</div> 
+
+			</div>
+		</div>
+		</main>
+		<script type="text/javascript">
+		function process_details(){
+			var website_details_form = document.getElementById("website_details")
+			var article_links_form = document.getElementById("articles")
+			var form_data  = {}
+			for(var i =0; i < website_details_form.length; i++)
+			{
+				form_data[website_details_form[i].id] = website_details_form[i].value
+			}
+			form_data["articles"] = []
+			for(var i =0; i < article_links_form.length; i++)
+			{
+				form_data["articles"].push(article_links_form[i].value)
+			}
+			$.ajax(
+			{
+				type : "POST",
+				url: "/details",
+				data: JSON.stringify(form_data),
+				dataType: "json",
+				contentType:"application/json"
+			});
+		}
+		$(function() {
+			$("#process_input").click(
+				function (){
+					process_details();
+				});
+		});
+		</script>
+			
+	</body>
+</html>
