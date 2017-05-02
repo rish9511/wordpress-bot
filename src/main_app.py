@@ -4,10 +4,10 @@ from flask import request
 import json
 import pika
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost', heartbeat_interval=0))
 channel = connection.channel()
 
-channel.queue_declare(queue='wordpress_details')
+channel.queue_declare(queue='wordpress_details', durable=True)
 
 
 app = Flask(__name__)
@@ -19,9 +19,12 @@ def process_details():
 	if request.method == "POST":
 		form_data = json.dumps(request.json)
 		if form_data:
-				channel.basic_publish(exchange='', routing_key='wordpress_details', body=form_data)
-				# if you ever want to know the relevance of the next line,refer to : https://github.com/pika/pika/issues/397#issuecomment-35322199
-				pika.BlockingConnection.process_data_events(connection)  
+			channel.basic_publish(
+				exchange='',
+				routing_key='wordpress_details',
+				body=form_data,
+				properties=pika.BasicProperties(delivery_mode=2)
+			)
 
 	return ""
 

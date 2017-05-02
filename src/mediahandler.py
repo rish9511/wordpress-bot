@@ -142,7 +142,7 @@ def download_and_upload_images(session, site_url):
 				if image_url:
 					img_details[amazon_link] = image_url
 
-		time.sleep(2)
+		time.sleep(3)
 
 	with open("../article_details.txt", "w") as file_obj:
 		json.dump(img_details, file_obj)

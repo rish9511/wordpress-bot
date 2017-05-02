@@ -15,7 +15,7 @@ def login(webiste, user_name, password):
 		try:
 			session = requests.Session()
 			webiste = webiste + "wp-login.php"
-			r = session.post("http://shikhargupta.in/pool/wp-login.php", data=data, headers=headers)
+			r = session.post(webiste, data=data, headers=headers)
 		except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
 			return False
 
@@ -52,8 +52,8 @@ def start_processing(form_data, session):
 			else:
 				print "\nCould not Download the article"
 
-		# remove all the files irrespective of whether the article got posted or not
-		remove_files()
+			# remove all the files irrespective of whether the article got posted or not
+			remove_files()
 
 
 def init(form_data):
