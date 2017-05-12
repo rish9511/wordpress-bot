@@ -44,7 +44,7 @@ def edit_article(tag):
 							link = link.group(1)
 							if link[-1:] == "/":
 								link = link[:-1]
-							link = link + "?%s" % (tag)
+							link = link + "?tag=%s" % (tag)
 
 						if price_tag_link:
 							price_tag_link = "05" + price_tag_link + "\n"
@@ -76,7 +76,7 @@ def edit_article(tag):
 						line = "01" + line + "\n"
 						write_to_temp_file(line)
 
-	except IOError as error:
+	except (IOError, UnicodeDecodeError) as error:
 		return False
 
 	return True

@@ -7,8 +7,6 @@ from amazon.api import AmazonAPI
 import json
 import time
 
-special_characters = [" ", ",", "'", '"', "(", ")", "/", "&", "\xc2", "\xa0", "\xae", "$", ";"]
-
 
 def get_form_data(session, title, site_url):
 
@@ -55,10 +53,6 @@ def get_image_url(response):
 
 def upload_image(session, title, site_url):
 
-	for sc in special_characters:
-			if sc in title:
-				title = title.replace(sc, "_")
-
 	title = title + ".jpg"
 
 	form_data = get_form_data(session, title, site_url)
@@ -78,17 +72,18 @@ def upload_image(session, title, site_url):
 
 		return get_image_url(r.content)
 
+	return None
+
 
 def move_and_resize(filename, title):
 	# change the name of the file
-	for sc in special_characters:
-		if sc in title:
-			title = title.replace(sc, "_")
-	title = title + ".jpg"
-	title = "../" + title
-	move = 'mv %s %s' % (filename, title)
-	resize = 'convert %s -resize 300x300 %s' % (title, title)
+
 	try:
+		title = title + ".jpg"
+		title = "../" + title
+		move = 'mv %s %s' % (filename, title)
+		resize = 'convert %s -resize 300x300 %s' % (title, title)
+
 		os.system(move)
 		os.system(resize)
 	except OSError as e:
@@ -97,7 +92,31 @@ def move_and_resize(filename, title):
 	return True
 
 
-def download_image(ansi):
+def rename_title(title, index):
+	try:
+
+		unicode_expr = "([^\u0000-\u007F]+)"
+		hexchar_expr = "([^\x00-\x7F]+)"
+		non_alphanumeric_expr = "([^\w]+)"
+
+		unicode_chars = re.findall(unicode_expr, title)
+		for chars in unicode_chars:
+			title = title.replace(chars, "_")
+
+		hex_chars = re.findall(hexchar_expr, title)
+		for chars in hex_chars:
+			title = title.replace(hex_chars, "_")
+
+		non_alphanumeric_chars = re.findall(non_alphanumeric_expr, title)
+		for chars in non_alphanumeric_chars:
+			title = title.replace(chars, "_")
+
+		return title
+	except Exception as e:
+		return "Unnamed_%s" % (index)
+
+
+def download_image(ansi, index):
 	try:
 		amazon = AmazonAPI("AKIAI6QK73F3SFYOOI2A", "DeOYip7bDtrTMb1qnMtW+ZkaMmJPEJ2c4ZVrBsRc", "1003d1-20")
 		product = amazon.lookup(ItemId=ansi)
@@ -105,7 +124,8 @@ def download_image(ansi):
 	except Exception as e:
 		# product not available through amazon's product api.
 		return False
-	return {'file': filename, 'title': product.title}
+	title = rename_title(product.title, index)
+	return {'file': filename, 'title': title}
 
 
 def find_ansi():
@@ -134,8 +154,8 @@ def download_and_upload_images(session, site_url):
 	'''
 	img_details = {}
 	ansi_dict = find_ansi()
-	for amazon_link in ansi_dict:
-		details = download_image(ansi_dict[amazon_link])
+	for (index, amazon_link) in enumerate(ansi_dict):
+		details = download_image(ansi_dict[amazon_link], index)
 		if details:
 			if move_and_resize(details["file"], details["title"]):
 				image_url = upload_image(session, details["title"], site_url)
