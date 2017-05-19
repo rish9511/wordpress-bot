@@ -4,8 +4,10 @@ from mediahandler import download_and_upload_images
 from new_post import create_new_post
 from post_it import post_article
 from remove_everything import remove_files
-import requests
+from mailer import mail_the_report
 
+import requests
+import json
 
 def login(webiste, user_name, password):
 
@@ -25,11 +27,37 @@ def login(webiste, user_name, password):
 	return False
 
 
+def prepare_artilce_report(website, article_link, articles_report,posted):
+
+    report = {"website": website, "article_link": article_link, "posted": posted}
+
+    if posted:
+
+        images_not_uploaded = []
+
+        with open("../images_not_uploaded.txt", "r") as file_obj:
+            images_not_uploaded.append(file_obj.readline())
+
+        report["images_not_uploaded"] = images_not_uploaded
+
+    articles_report.append(report)
+
+    return articles_report
+
+
+
+
 def start_processing(form_data, session):
 
 	articles = form_data["articles"]
+	website = form_data["website"]
+	articles_report = []
+	articles_received = 0
+	articles_posted = 0
 	for article_link in articles:
+
 		if article_link:
+                        articles_received += 1
 			downloaded = article_download(article_link)
 			if downloaded:
 				edit_done = start_editing(form_data["tag"])
@@ -40,20 +68,23 @@ def start_processing(form_data, session):
 						if download_and_upload_images(session, form_data["website"]):  # the function always returns true, hence we don't have an else block
 							if post_article(session, form_data["website"]):
 
-								print "\nSuccess"
+                                                                articles_posted += 1
+								articles_report = prepare_artilce_report(website, article_link, articles_report, True)
 							else:
-								print "\nFailed"
+								articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 
 					else:
-						print "\nCould not create the post %s " % (article_link)
+						articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 
 				else:
-					print "\nCould not edit the artilce %s " % (article_link)
+					articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 			else:
-				print "\nCould not Download the article %s " % (article_link)
+                                articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 
 			# remove all the files irrespective of whether the article got posted or not
 			remove_files()
+
+        mail_the_report(articles_report, articles_received, articles_posted)
 
 
 def init(form_data):
@@ -65,4 +96,4 @@ def init(form_data):
 	if session:
 		start_processing(form_data, session)
 	else:
-		print "Login failed"
+		print "Login failed. Website: %s" % (form_data["website"])

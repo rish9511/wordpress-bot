@@ -1,0 +1,7 @@
+Flask
+pika
+requests
+google-api-python-client
+beautifulsoup4
+python-amazon-simple-product-api: https://pypi.python.org/pypi/python-amazon-simple-product-api
+wget

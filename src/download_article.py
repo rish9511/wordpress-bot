@@ -9,6 +9,12 @@ from oauth2client import client
 from oauth2client import tools
 from oauth2client.file import Storage
 
+try:
+    import argparse
+    flags = argparse.ArgumentParser(parents=[tools.argparser]).parse_args()
+except ImportError:
+    flags = None
+
 
 SCOPES = 'https://www.googleapis.com/auth/drive'
 CLIENT_SECRET_FILE = '~/google_oauth2/client_secret.json'
@@ -22,7 +28,7 @@ def get_credentials():
     if not os.path.exists(credential_dir):
         os.makedirs(credential_dir)
     credential_path = os.path.join(credential_dir,
-                                   'article_dowloader.json')
+                                   'article_downloader.json')
 
     store = Storage(credential_path)
     credentials = store.get()
@@ -38,6 +44,7 @@ def get_credentials():
 
 
 def get_article_id(article_link):
+
     pattern = "https://docs.google.com/document/d/(.*)/"
 
     if re.search(pattern, article_link):

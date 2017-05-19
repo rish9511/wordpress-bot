@@ -7,5 +7,6 @@ def remove_files():
 		os.system('rm ../article_details.txt')
 		os.system('rm ../id.txt')
 		os.system('rm ../article.txt')
+		os.system('rm ../images_not_uploaded.txt')
 	except OSError as e:
 		pass

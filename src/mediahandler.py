@@ -153,18 +153,40 @@ def download_and_upload_images(session, site_url):
 		* returns true always - This is because we can post the artilces without images.
 	'''
 	img_details = {}
+	images_with_issues = []
 	ansi_dict = find_ansi()
+
 	for (index, amazon_link) in enumerate(ansi_dict):
+
 		details = download_image(ansi_dict[amazon_link], index)
+
 		if details:
+
+                        if "Unnamed_" in details["title"]:
+                            images_with_issues.append(amazon_link)
+
 			if move_and_resize(details["file"], details["title"]):
 				image_url = upload_image(session, details["title"], site_url)
 				if image_url:
 					img_details[amazon_link] = image_url
+                                else:
+                                    # upload failed
+                                    images_with_issues.append(amazon_link)
+                        else:
+                            #move and resize failed
+                            images_with_issues.append(amazon_link)
+                else:
+                    # download failed
+                    images_with_issues.append(amazon_link)
 
 		time.sleep(3)
 
 	with open("../article_details.txt", "w") as file_obj:
 		json.dump(img_details, file_obj)
+
+        with open("../images_not_uploaded.txt", "w") as file_obj:
+                for images_link in images_with_issues:
+                    file_obj.write(images_link)
+                    file_obj.write("\n")
 
 	return True

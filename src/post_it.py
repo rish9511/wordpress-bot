@@ -2,7 +2,6 @@ import requests
 from bs4 import BeautifulSoup
 import re
 import json
-from requests_oauthlib import OAuth1
 from json import dumps
 
 
