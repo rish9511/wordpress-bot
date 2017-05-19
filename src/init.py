@@ -9,6 +9,7 @@ from mailer import mail_the_report
 import requests
 import json
 
+
 def login(webiste, user_name, password):
 
 	if webiste and user_name and password:
@@ -27,24 +28,20 @@ def login(webiste, user_name, password):
 	return False
 
 
-def prepare_artilce_report(website, article_link, articles_report,posted):
+def prepare_artilce_report(website, article_link, articles_report, posted):
 
-    report = {"website": website, "article_link": article_link, "posted": posted}
+	report = {"website": website, "article_link": article_link, "posted": posted}
 
-    if posted:
+	if posted:
+		images_not_uploaded = []
+		with open("../images_not_uploaded.txt", "r") as file_obj:
+			images_not_uploaded.append(file_obj.readline())
 
-        images_not_uploaded = []
+		report["images_not_uploaded"] = images_not_uploaded
 
-        with open("../images_not_uploaded.txt", "r") as file_obj:
-            images_not_uploaded.append(file_obj.readline())
+	articles_report.append(report)
 
-        report["images_not_uploaded"] = images_not_uploaded
-
-    articles_report.append(report)
-
-    return articles_report
-
-
+	return articles_report
 
 
 def start_processing(form_data, session):
@@ -57,7 +54,7 @@ def start_processing(form_data, session):
 	for article_link in articles:
 
 		if article_link:
-                        articles_received += 1
+			articles_received += 1
 			downloaded = article_download(article_link)
 			if downloaded:
 				edit_done = start_editing(form_data["tag"])
@@ -67,8 +64,7 @@ def start_processing(form_data, session):
 
 						if download_and_upload_images(session, form_data["website"]):  # the function always returns true, hence we don't have an else block
 							if post_article(session, form_data["website"]):
-
-                                                                articles_posted += 1
+								articles_posted += 1
 								articles_report = prepare_artilce_report(website, article_link, articles_report, True)
 							else:
 								articles_report = prepare_artilce_report(website, article_link, articles_report, False)
@@ -79,16 +75,18 @@ def start_processing(form_data, session):
 				else:
 					articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 			else:
-                                articles_report = prepare_artilce_report(website, article_link, articles_report, False)
+				articles_report = prepare_artilce_report(website, article_link, articles_report, False)
 
 			# remove all the files irrespective of whether the article got posted or not
 			remove_files()
 
-        mail_the_report(articles_report, articles_received, articles_posted)
+	mail_the_report(articles_report, articles_received, articles_posted)
 
 
 def init(form_data):
+
 	# login to the website. If login fails return error , else start processing
+
 	if not form_data["website"].endswith("/"):
 		form_data["website"] = form_data["website"] + "/"
 

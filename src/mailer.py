@@ -9,9 +9,7 @@ fromaddr = "botwordpress1@gmail.com"
 toaddr = "rishabh9511@gmail.com"
 
 
-
-
-def mail_the_report(report, articles_received, articles_posted ):
+def mail_the_report(report, articles_received, articles_posted):
 
     msg = MIMEMultipart()
     msg['From'] = fromaddr
@@ -21,12 +19,7 @@ def mail_the_report(report, articles_received, articles_posted ):
 
     msg.attach(MIMEText(body, 'plain'))
 
-    filename =  "article_report.json"
-
-    #with open("../%s"%(filename), "w") as file_obj:
-            #file_obj.write(json.dumps(report, indent=4, separators=(',', ': ')))
-
-    #attachment = open(filename, "rb")
+    filename = "article_report.json"
 
     part = MIMEBase('application', 'octet-stream')
     part.set_payload(json.dumps(report, indent=4, separators=(',', ': ')))
