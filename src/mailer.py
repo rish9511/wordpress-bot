@@ -15,7 +15,7 @@ def mail_the_report(report, articles_received, articles_posted):
     msg['From'] = fromaddr
     msg['To'] = toaddr
     msg['Subject'] = "Articles report"
-    body = "Total articles received %s \n Total articles posted %s " % (articles_received, articles_posted)
+    body = "Total articles received %s\n Total articles posted %s " % (articles_received, articles_posted)
 
     msg.attach(MIMEText(body, 'plain'))
 

@@ -6,46 +6,58 @@ import os
 from amazon.api import AmazonAPI
 import json
 import time
+from HTMLParser import HTMLParseError
 
 
 def get_form_data(session, title, site_url):
 
 	try:
-		url = site_url + "wp-admin/media-new.php"
+		url = site_url + u"wp-admin/media-new.php"
 		r = session.get(url)
 
-	except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+	except (requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 		return None
 
 	if r.status_code == requests.codes.ok:
+		try:
+			_wpnonce = ""
+			soup = BeautifulSoup(r.content, "lxml")
+			scripts = soup.find_all("script", {"type": "text/javascript"})
 
-		_wpnonce = ""
-		soup = BeautifulSoup(r.content, "lxml")
-		scripts = soup.find_all("script", {"type": "text/javascript"})
+			for elem in scripts:
+				if "wpUploaderInit" in elem.text:
 
-		for elem in scripts:
-			if "wpUploaderInit" in elem.text:
+					if re.search('_wpnonce\":"(\w+)"', elem.text):
+						_wpnonce = re.search('_wpnonce\":"(\w+)"', elem.text).group(1)
+						break
+			if _wpnonce:
+				data = {
+					"name": title,
+					"action": "upload-attachment",
+					"_wpnonce": _wpnonce
+				}
+				return data
 
-				if re.search('_wpnonce\":"(\w+)"', elem.text):
-					_wpnonce = re.search('_wpnonce\":"(\w+)"', elem.text).group(1)
-					break
-		data = {
-			"name": title,
-			"action": "upload-attachment",
-			"_wpnonce": _wpnonce
-		}
-	return data
+		except (re.error, HTMLParseError, IndexError, AttributeError) as e:
+			return None
+
+	return None
 
 
 def get_image_url(response):
 
 	try:
+		response = response.decode('utf-8', errors='ignore')
+	except (UnicodeError) as e:
+		pass
 
-		if re.search("{.*", response):
-			response = json.loads(re.search("{.*", response).group(0))
+	try:
+
+		if re.search(u"{.*", response):
+			response = json.loads(re.search(u"{.*", response).group(0))
 			return response["data"]["url"]
 
-	except (ValueError, AttributeError) as e:
+	except (LookupError, AttributeError, re.error,) as e:
 		return None
 
 	return None
@@ -53,7 +65,7 @@ def get_image_url(response):
 
 def upload_image(session, title, site_url):
 
-	title = title + ".jpg"
+	title = title + u".jpg"
 
 	form_data = get_form_data(session, title, site_url)
 
@@ -63,13 +75,13 @@ def upload_image(session, title, site_url):
 
 			with open("../%s" % (title), "r") as img:
 				files = {"async-upload": img}
-				site_url = site_url + "wp-admin/async-upload.php"
+				site_url = site_url + u"wp-admin/async-upload.php"
 				r = session.post(site_url, data=form_data, files=files)
 
-		except (IOError, requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+		except (IOError, requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 			return None
-			# remove hex characters from content and the load json from it. get the url and return it
 
+		# remove hex characters from content and the load json from it. get the url and return it
 		return get_image_url(r.content)
 
 	return None
@@ -79,41 +91,62 @@ def move_and_resize(filename, title):
 	# change the name of the file
 
 	try:
-		title = title + ".jpg"
-		title = "../" + title
+		title = title + u".jpg"
+		title = u"../" + title
 		move = 'mv %s %s' % (filename, title)
-		resize = 'convert %s -resize 300x300 %s' % (title, title)
+		resize = 'convert %s -resize 300x300 %s' % (filename, filename)
 
-		os.system(move)
 		os.system(resize)
-	except OSError as e:
+		os.system(move)
+	except (OSError, UnboundLocalError) as e:
+		# UnboundLocalError: Raised when a reference is made to a local variable in a function or method, but no value has been bound to that variable
+		# Reason: file was not named properly
 		return False
 
 	return True
 
 
 def rename_title(title, index):
+
 	try:
 
-		unicode_expr = "([^\u0000-\u007F]+)"
-		hexchar_expr = "([^\x00-\x7F]+)"
-		non_alphanumeric_expr = "([^\w]+)"
+		if isinstance(title, unicode):
+			title = title.encode('utf-8', errors='ignore')
 
-		unicode_chars = re.findall(unicode_expr, title)
-		for chars in unicode_chars:
-			title = title.replace(chars, "_")
+		title = title.decode('utf-8', errors='ignore')
 
-		hex_chars = re.findall(hexchar_expr, title)
-		for chars in hex_chars:
-			title = title.replace(hex_chars, "_")
+	except (UnicodeDecodeError, UnicodeEncodeError) as e:
+		pass
 
-		for chars in non_alphanumeric_chars:
-			non_alphanumeric_chars = re.findall(non_alphanumeric_expr, title)
-			title = title.replace(chars, "_")
+	try:
+
+		title = title.replace(' ', '')
+
+		unicode_expr = u"([^\u0000-\u007F]+)"
+		hexchar_expr = u"([^\x00-\x7F]+)"
+		non_alphanumeric_expr = u"([^\w]+)"
+
+		unicode_char = re.search(unicode_expr, title)
+		while(unicode_char):
+			title = title.replace(unicode_char.group(), "_")
+			unicode_char = re.search(unicode_expr, title)
+
+		hex_char = re.search(hexchar_expr, title)
+		while(hex_char):
+			title = title.replace(hex_char.group(), "_")
+			hex_char = re.search(hexchar_expr, title)
+
+		non_alphanumeric_char = re.search(non_alphanumeric_expr, title)
+		while(non_alphanumeric_char):
+			title = title.replace(non_alphanumeric_char.group(), "_")
+			non_alphanumeric_char = re.search(non_alphanumeric_expr, title)
+
+		# just a precaution. All the '"' should have been removed by the non_alphanumeric_expr
+		title = title.replace('"', "_")
 
 		return title
-	except Exception as e:
-		return "Unnamed_%s" % (index)
+	except (re.error, UnicodeError) as e:
+		return u"Unnamed_%s" % (index)
 
 
 def download_image(ansi, index):
@@ -133,9 +166,14 @@ def find_ansi():
 	try:
 		with open("../article.txt", "r") as file_obj:
 			for line in file_obj:
+				try:
+					line = line.decode('utf-8', errors='ignore')
+				except (UnicodeDecodeError, UnicodeEncodeError) as e:
+					# could not convert the line to unicode type.
+					pass
 				if line.strip().startswith("07"):
 					amazon_link = line.replace("07", "", 1)
-					ansi = re.search("dp/(\w*)/?", amazon_link)
+					ansi = re.search(u"dp/(\w*)/?", amazon_link)
 					if ansi:
 						ansi_dict[amazon_link] = ansi.group(1)
 	except IOError as e:
@@ -154,6 +192,7 @@ def download_and_upload_images(session, site_url):
 	'''
 	img_details = {}
 	images_with_issues = []
+
 	ansi_dict = find_ansi()
 
 	for (index, amazon_link) in enumerate(ansi_dict):
@@ -161,7 +200,7 @@ def download_and_upload_images(session, site_url):
 		details = download_image(ansi_dict[amazon_link], index)
 
 		if details:
-			if "Unnamed_" in details["title"]:
+			if u"Unnamed_" in details["title"]:
 				images_with_issues.append(amazon_link)
 
 			if move_and_resize(details["file"], details["title"]):
@@ -178,7 +217,7 @@ def download_and_upload_images(session, site_url):
 			# download failed
 			images_with_issues.append(amazon_link)
 
-		time.sleep(3)
+		time.sleep(6)
 
 	with open("../article_details.txt", "w") as file_obj:
 		json.dump(img_details, file_obj)

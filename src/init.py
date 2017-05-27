@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 from download_article import article_download
 from edit_article import start_editing
 from mediahandler import download_and_upload_images
@@ -10,15 +11,15 @@ import requests
 import json
 
 
-def login(webiste, user_name, password):
+def login(website, user_name, password):
 
-	if webiste and user_name and password:
+	if website and user_name and password:
 		data = {'log': user_name, 'pwd': password}
 		headers = {'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.59 Safari/537.36'}
 		try:
 			session = requests.Session()
-			webiste = webiste + "wp-login.php"
-			r = session.post(webiste, data=data, headers=headers)
+			website = website + u"wp-login.php"
+			r = session.post(website, data=data, headers=headers)
 		except (requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 			return False
 
@@ -28,7 +29,7 @@ def login(webiste, user_name, password):
 	return False
 
 
-def prepare_artilce_report(website, article_link, articles_report, posted):
+def prepare_artilce_report(website, article_link, posted):
 
 	report = {"website": website, "article_link": article_link, "posted": posted}
 
@@ -39,16 +40,14 @@ def prepare_artilce_report(website, article_link, articles_report, posted):
 
 		report["images_not_uploaded"] = images_not_uploaded
 
-	articles_report.append(report)
-
-	return articles_report
+	return report
 
 
 def start_processing(form_data, session):
 
 	articles = form_data["articles"]
 	website = form_data["website"]
-	articles_report = []
+	all_articles_report = []
 	articles_received = 0
 	articles_posted = 0
 	for article_link in articles:
@@ -65,22 +64,28 @@ def start_processing(form_data, session):
 						if download_and_upload_images(session, form_data["website"]):  # the function always returns true, hence we don't have an else block
 							if post_article(session, form_data["website"]):
 								articles_posted += 1
-								articles_report = prepare_artilce_report(website, article_link, articles_report, True)
+								report = prepare_artilce_report(website, article_link, True)
+								all_articles_report.append(report)
+
 							else:
-								articles_report = prepare_artilce_report(website, article_link, articles_report, False)
+								report = prepare_artilce_report(website, article_link, False)
+								all_articles_report.append(report)
 
 					else:
-						articles_report = prepare_artilce_report(website, article_link, articles_report, False)
+						report = prepare_artilce_report(website, article_link, False)
+						all_articles_report.append(report)
 
 				else:
-					articles_report = prepare_artilce_report(website, article_link, articles_report, False)
+					report = prepare_artilce_report(website, article_link, False)
+					all_articles_report.append(report)
 			else:
-				articles_report = prepare_artilce_report(website, article_link, articles_report, False)
+				report = prepare_artilce_report(website, article_link, False)
+				all_articles_report.append(report)
 
 			# remove all the files irrespective of whether the article got posted or not
 			remove_files()
 
-	mail_the_report(articles_report, articles_received, articles_posted)
+	mail_the_report(all_articles_report, articles_received, articles_posted)
 
 
 def init(form_data):
@@ -88,7 +93,7 @@ def init(form_data):
 	# login to the website. If login fails return error , else start processing
 
 	if not form_data["website"].endswith("/"):
-		form_data["website"] = form_data["website"] + "/"
+		form_data["website"] = form_data["website"] + u"/"
 
 	session = login(form_data["website"], form_data["user_name"], form_data["password"])
 	if session:

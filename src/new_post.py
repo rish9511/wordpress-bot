@@ -1,15 +1,16 @@
 import re
 from bs4 import BeautifulSoup
 import requests
+from HTMLParser import HTMLParseError
 
 
 def get_form_data(session, url, title):
 
 	try:
-		url = url + "wp-admin/post-new.php"
+		url = url + u"wp-admin/post-new.php"
 		r = session.get(url)
 
-	except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+	except (requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 		return None
 	try:
 		if r.status_code == requests.codes.ok:
@@ -39,8 +40,8 @@ def get_form_data(session, url, title):
 				"closedpostboxesnonce": closedpostboxesnonce,
 				"post_title": title
 			}
-	except Exception as e:
-		print e
+	except (HTMLParseError, LookupError) as e:
+		# could not find the required form values
 		return None
 
 
@@ -48,6 +49,11 @@ def find_title():
 	try:
 		with open("../article.txt", "r") as file_obj:
 			for line in file_obj:
+				try:
+					line = line.decode('utf-8', errors='ingore')
+				except (UnicodeDecodeError, UnicodeEncodeError) as e:
+					# failed to covert str type to unicode type
+					pass
 				if line.strip().startswith("00"):
 					return line.replace("00", "", 1)
 
@@ -59,10 +65,10 @@ def find_title():
 
 def create_post(session, url, form_data):
 	try:
-		url = url + "wp-admin/post.php"
+		url = url + u"wp-admin/post.php"
 		r = session.post(url, data=form_data)
 
-	except (requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+	except (requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 		return False
 
 	if r.status_code == requests.codes.ok:
@@ -81,7 +87,7 @@ def create_new_post(session, url):
 	title = find_title()
 
 	if not title:
-		title = "title_not_found"
+		title = u"title_not_found"
 
 	form_data = get_form_data(session, url, title)
 	if form_data:

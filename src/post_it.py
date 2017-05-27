@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -6,17 +7,21 @@ from json import dumps
 
 
 def push_back(text, code, amazon_link="", source_url=""):
+
 	if code == 01:
 		text = '<p>' + text + '</p>'
 		return text
+
 	if code == 10:
 		anchor_tag = '''\
 		<a href=%s target="_blank" rel="nofollow" class="">''' % (amazon_link)
-		text = ' <h3 class="">' + anchor_tag + text + '</a>' + '</h3>'
+		text = ' <h2 class="">' + anchor_tag + text + '</a>' + '</h2>'
 		return text
+
 	if code == 11:
 		text = '<h4 class="">' + text + '</h4>'
 		return text
+
 	if code == 100:
 		list_tag = '''\
 		<ul>
@@ -26,6 +31,7 @@ def push_back(text, code, amazon_link="", source_url=""):
 		closing_tag = '</p></li></ul>'
 		text = list_tag + text + closing_tag
 		return text
+
 	if code == 101:
 		price_tag = '''
 		<div class="thrv_wrapper thrv_button_shortcode tve_centerBtn" data-tve-style="1">
@@ -42,6 +48,7 @@ def push_back(text, code, amazon_link="", source_url=""):
 		<br><br>''' % (text)
 		text = price_tag
 		return text
+
 	if code == 110:
 		image_tag = '''\
 		<div style="" class="thrv_wrapper tve_image_caption alignleft">
@@ -53,8 +60,9 @@ def push_back(text, code, amazon_link="", source_url=""):
 		</div>''' % (amazon_link, source_url)
 		text = image_tag + text
 		return text
+
 	if code == 1000:
-		text = ' <h3 class="">' + text + '</h3>'
+		text = ' <h2 class="">' + text + '</h2>'
 		return text
 
 
@@ -66,8 +74,8 @@ def prepare_article_html():
 	# If we have have it and it's not empty, we will have images in the article otherwise not
 	try:
 		with open("../article_details.txt", "r") as json_file:
-			details = json.load(json_file)
-	except IOError as e:
+			details = json.load(json_file, 'utf-8')
+	except (IOError, UnicodeError) as e:
 		pass
 
 	try:
@@ -76,35 +84,45 @@ def prepare_article_html():
 			article_html = ""
 			amazon_link = ""
 			for line in file_obj:
+				try:
+					line = line.decode('utf-8', errors='ignore')
+				except UnicodeError as e:
+					pass
+
 				if line.strip().startswith("00"):
 					continue
+
 				if line.strip().startswith("01"):
-					txt = line.replace("01", "").decode('utf-8')
+					txt = line.replace("01", "", 1)
 
 					article_html += push_back(txt, 01)
 
 				if line.strip().startswith("02"):
-					txt = line.replace("02", "").decode('utf-8')
+					txt = line.replace("02", "")
 					article_html += push_back(txt, 10, amazon_link)
 
 				if line.strip().startswith("03"):
-					txt = line.replace("03", "").decode('utf-8')
+					txt = line.replace("03", "")
 					article_html += push_back(txt, 11)
 
 				if line.strip().startswith("04"):
-					txt = line.replace("04", "").decode('utf-8')
+					txt = line.replace("04", "")
 					article_html += push_back(txt, 100)
 
 				if line.strip().startswith("05"):
-					txt = line.replace("05", "").decode('utf-8')
+					txt = line.replace("05", "")
 					article_html += push_back(txt, 101)
 
 				if line.strip().startswith("06"):
-					txt = line.replace("06", "").decode('utf-8')
+					txt = line.replace("06", "")
 					source_url = ""
 					try:
 						source_url = details[amazon_link]
-					except KeyError as e:
+					except (KeyError, NameError) as e:
+						# we have downloaded and uploaded the image but due to some reason we don't have the details
+						# Reason : article_details file failed to load or due to different encodings of strings in
+						# details file and 'amazon_link'
+						# Image will not appear in the artilce and therefore it should go in article_report
 						continue
 					article_html += push_back(txt, 110, amazon_link, source_url)
 
@@ -113,12 +131,12 @@ def prepare_article_html():
 					amazon_link = txt
 
 				if line.strip().startswith("08"):
-					txt = line.replace("08", "").decode('utf-8')
+					txt = line.replace("08", "")
 					article_html += push_back(txt, 1000)
 
 			return article_html
 
-	except IOError as e:
+	except (IOError, Exception) as e:
 		return None
 
 
@@ -127,15 +145,20 @@ def get_thrive_plugin_page(session, website_url):
 	try:
 		with open("../id.txt", "r") as file_obj:
 			post_id = file_obj.read()
-			if post_id:
 
-				website_url = website_url + "?p=%s&tve=true" % (post_id)
+			try:
+				post_id = post_id.decode('utf-8', errors='ignore')
+			except (UnicodeError) as e:
+				pass
+
+			if post_id:
+				website_url = website_url + u"?p=%s&tve=true" % (post_id)
 				resp = session.get(website_url)
 
 				if resp.status_code == requests.codes.ok:
 					return resp
 
-	except (IOError, requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+	except (IOError, UnicodeError, requests.Timeout, requests.ConnectionError, requests.HTTPError, requests.exceptions.RequestException) as e:
 		return None
 
 	return None
@@ -144,7 +167,7 @@ def get_thrive_plugin_page(session, website_url):
 def find_nonce(session, website_url):
 
 	'''
-		Since the we use thrive content builder plugin to post the articles, we have to find the nonce on the plugin's
+		Since  we use thrive content builder plugin to post the articles, we have to find the nonce on the plugin's
 		page
 		* Step 1: Using the id of the post, get the plugin page
 		* Step 2: Scrape the page and find the nonce
@@ -152,18 +175,23 @@ def find_nonce(session, website_url):
 	response = get_thrive_plugin_page(session, website_url)
 
 	if response:
-		soup = BeautifulSoup(response.text, 'lxml')
-		scripts = soup.find_all("script", {"type": "text/javascript"})
-		for tag in scripts:
-			if tag.text:
-				nonce = re.search('"nonce":"(.*)",', tag.text)
+		try:
+			soup = BeautifulSoup(response.text, 'lxml')
+			scripts = soup.find_all("script", {"type": "text/javascript"})
+			for tag in scripts:
 
-				nonce_2 = re.search('"nonce":{"sendToEditor":"(\w*)"},', tag.text)
+				if tag.text:
+					nonce = re.search('"nonce":"(.*)",', tag.text)
+					nonce_2 = re.search('"nonce":{"sendToEditor":"(\w*)"},', tag.text)
 
-				if nonce:
-					return nonce.group(1)
-				if nonce_2:
-					return nonce_2.group(1)
+					if nonce:
+						return nonce.group(1)
+					if nonce_2:
+						return nonce_2.group(1)
+
+		except (HTMLParseError, re.error, AttributeError, LookupError) as e:
+			return None
+
 	return None
 
 
@@ -188,7 +216,7 @@ def post(session, nonce, html_article, website_url):
 					"has_icons": 0,
 					"tve_default_tooltip_settings": ""
 				}
-				website_url = website_url + "wp-admin/admin-ajax.php"
+				website_url = website_url + u"wp-admin/admin-ajax.php"
 				headers = {
 					'content-type': "application/x-www-form-urlencoded"
 				}
@@ -196,7 +224,7 @@ def post(session, nonce, html_article, website_url):
 				if resp.status_code == requests.codes.ok:
 					return True
 
-	except (IOError, requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
+	except (IOError, requests.exceptions.RequestException, requests.Timeout, requests.ConnectionError, requests.HTTPError) as e:
 		return False
 
 	return False

@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import httplib2
 import os
 import io
@@ -45,12 +46,12 @@ def get_credentials():
 
 def get_article_id(article_link):
 
-    pattern = "https://docs.google.com/document/d/(.*)/"
-
-    if re.search(pattern, article_link):
-        return re.search(pattern, article_link).group(1)
-
-    return None
+    pattern = u"https://docs.google.com/document/d/(.*)/"
+    try:
+        if re.search(pattern, article_link):
+            return re.search(pattern, article_link).group(1)
+    except (re.error, IndexError) as e:
+        return None
 
 
 def download(article_id, google_service):
@@ -63,7 +64,14 @@ def download(article_id, google_service):
         status, done = downloader.next_chunk()
         if done:
             with open("../article.txt", "w") as file:
-                file.write(fh.getvalue())
+                try:
+                    # store the article as bytes of strings with character encoding as utf-8
+                    article = fh.getvalue().decode('utf-8', errors='ignore').encode('utf-8', errors='ignore')
+                    file.write(article)
+                except (UnicodeDecodeError, UnicodeEncodeError) as e:
+                    # failed to convert the downloaded article's encoding to utf-8. storing the article as received
+                    file.write(fh.getvalue())
+
     return done
 
 

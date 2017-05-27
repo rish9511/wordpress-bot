@@ -1,3 +1,4 @@
+# -*- coding: UTF-8 -*-
 import os
 import re
 
@@ -16,9 +17,16 @@ def replace_original_with_temp(temp_file, original_file):
 def write_to_temp_file(text):
 
 	try:
+		text = text.encode('utf-8', errors='ignore')
+	except (UnicodeDecodeError, UnicodeEncodeError) as e:
+		# failed to convert the text to str type before writing to temp file
+		pass
+
+	try:
 		with open("../article.txt.tmp", "a") as temp_article:
 			temp_article.write(text)
 	except IOError as error:
+		# this is just bad. If it ever happens, the artilce will be incomplete.
 		return False
 
 	return True
@@ -30,21 +38,26 @@ def edit_article(tag):
 		with open("../article.txt", "r") as article:
 			title_found = False
 			product_link_found = False
-			price_tag_link = ""
+			price_tag_link = u""
 			for line in article:
+				try:
+					line = line.decode('utf-8', errors='ignore')
+				except (UnicodeDecodeError, UnicodeEncodeError) as e:
+					pass
+
 				if line.strip() != "":
 					if not title_found:
 						line = "00" + line + "\n"
 						write_to_temp_file(line)
 						title_found = True
 
-					elif "https://" in line or "http://" in line or "www.amazon.com" in line:
-						link = re.search("(.*/dp/\w*/?)", line)
+					elif u"https://" in line or u"http://" in line or u"www.amazon.com" in line:
+						link = re.search(u"(.*/dp/\w*/?)", line)
 						if link:
 							link = link.group(1)
 							if link[-1:] == "/":
 								link = link[:-1]
-							link = link + "?tag=%s" % (tag)
+							link = link + u"?tag=%s" % (tag)
 
 						if price_tag_link:
 							price_tag_link = "05" + price_tag_link + "\n"
@@ -76,7 +89,7 @@ def edit_article(tag):
 						line = "01" + line + "\n"
 						write_to_temp_file(line)
 
-	except (IOError, UnicodeDecodeError) as error:
+	except (IOError, UnicodeDecodeError, UnicodeEncodeError, re.error, IndexError) as error:
 		return False
 
 	return True
