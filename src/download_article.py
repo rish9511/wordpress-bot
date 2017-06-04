@@ -56,23 +56,26 @@ def get_article_id(article_link):
 
 def download(article_id, google_service):
 
-    request = google_service.files().export_media(fileId=article_id, mimeType='text/plain')
-    fh = io.BytesIO()
-    downloader = MediaIoBaseDownload(fh, request)
-    done = False
-    while done is False:
-        status, done = downloader.next_chunk()
-        if done:
-            with open("../article.txt", "w") as file:
-                try:
-                    # store the article as bytes of strings with character encoding as utf-8
-                    article = fh.getvalue().decode('utf-8', errors='ignore').encode('utf-8', errors='ignore')
-                    file.write(article)
-                except (UnicodeDecodeError, UnicodeEncodeError) as e:
-                    # failed to convert the downloaded article's encoding to utf-8. storing the article as received
-                    file.write(fh.getvalue())
+    try:
+        request = google_service.files().export_media(fileId=article_id, mimeType='text/plain')
+        fh = io.BytesIO()
+        downloader = MediaIoBaseDownload(fh, request)
+        done = False
+        while done is False:
+            status, done = downloader.next_chunk()
+            if done:
+                with open("../article.txt", "w") as file:
+                    try:
+                        # store the article as bytes of strings with character encoding as utf-8
+                        article = fh.getvalue().decode('utf-8', errors='ignore').encode('utf-8', errors='ignore')
+                        file.write(article)
+                    except (UnicodeDecodeError, UnicodeEncodeError) as e:
+                        # failed to convert the downloaded article's encoding to utf-8. storing the article as received
+                        file.write(fh.getvalue())
 
-    return done
+        return done
+    except Exception:
+        return False
 
 
 def article_download(article_link):
@@ -81,15 +84,17 @@ def article_download(article_link):
         * step 2 - get the article id from the article_link
         * step 3 - download
     '''
+    try:
+        credentials = get_credentials()
+        http = credentials.authorize(httplib2.Http())
+        google_service = discovery.build('drive', 'v2', http=http)
 
-    credentials = get_credentials()
-    http = credentials.authorize(httplib2.Http())
-    google_service = discovery.build('drive', 'v2', http=http)
+        article_id = get_article_id(article_link)
 
-    article_id = get_article_id(article_link)
+        if article_id:
+            if download(article_id, google_service):
+                return True
 
-    if article_id:
-        if download(article_id, google_service):
-            return True
-
-    return False
+        return False
+    except Exception as e:
+        return False

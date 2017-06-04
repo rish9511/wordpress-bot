@@ -10,6 +10,8 @@ from mailer import mail_the_report
 import requests
 import json
 
+images_not_uploaded = ""
+
 
 def login(website, user_name, password):
 
@@ -31,25 +33,30 @@ def login(website, user_name, password):
 
 def prepare_artilce_report(website, article_link, posted):
 
-	report = {"website": website, "article_link": article_link, "posted": posted}
-
-	if posted:
-		images_not_uploaded = []
+	global images_not_uploaded
+	article_report = ""
+	try:
 		with open("../images_not_uploaded.txt", "r") as file_obj:
-			images_not_uploaded.append(file_obj.readline())
+			link = file_obj.readline()
+			if link:
+				article_report += "product_link: " + link
+				article_report += "\n\n"
 
-		report["images_not_uploaded"] = images_not_uploaded
-
-	return report
+		if article_report:
+				artilce_report = "article_link: " + article_link + "\n\n" + article_report + "------------------------------------------------------------\n\n"
+				images_not_uploaded += artilce_report
+	except IOError:
+		return
 
 
 def start_processing(form_data, session):
 
+	global images_not_uploaded
 	articles = form_data["articles"]
 	website = form_data["website"]
-	all_articles_report = []
 	articles_received = 0
 	articles_posted = 0
+	articles_not_posted = ''
 	for article_link in articles:
 
 		if article_link:
@@ -64,28 +71,30 @@ def start_processing(form_data, session):
 						if download_and_upload_images(session, form_data["website"]):  # the function always returns true, hence we don't have an else block
 							if post_article(session, form_data["website"]):
 								articles_posted += 1
-								report = prepare_artilce_report(website, article_link, True)
-								all_articles_report.append(report)
+								prepare_artilce_report(website, article_link, True)
 
 							else:
-								report = prepare_artilce_report(website, article_link, False)
-								all_articles_report.append(report)
+								prepare_artilce_report(website, article_link, False)
+								articles_not_posted += "\n" + "link: " + article_link + "\n"
 
 					else:
-						report = prepare_artilce_report(website, article_link, False)
-						all_articles_report.append(report)
-
+						prepare_artilce_report(website, article_link, False)
+						articles_not_posted += "\n" + "link: " + article_link + "\n"
 				else:
-					report = prepare_artilce_report(website, article_link, False)
-					all_articles_report.append(report)
+					prepare_artilce_report(website, article_link, False)
+					articles_not_posted += "\n" + "link: " + article_link + "\n"
+
 			else:
-				report = prepare_artilce_report(website, article_link, False)
-				all_articles_report.append(report)
+				prepare_artilce_report(website, article_link, False)
+				articles_not_posted += "\n" + "link: " + article_link + "\n"
 
 			# remove all the files irrespective of whether the article got posted or not
 			remove_files()
 
-	mail_the_report(all_articles_report, articles_received, articles_posted)
+	if images_not_uploaded:
+		images_not_uploaded = "\nWebsite: " + website + "\n\n" + images_not_uploaded
+	mail_the_report(images_not_uploaded, articles_received, articles_posted, articles_not_posted)
+	images_not_uploaded = ""
 
 
 def init(form_data):
